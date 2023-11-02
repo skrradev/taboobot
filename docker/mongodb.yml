@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: taboo
+      MONGO_INITDB_ROOT_PASSWORD: 123
+      MONGO_INITDB_DATABASE: taboodb
+
+    ports:
+      - "27017:27017"
