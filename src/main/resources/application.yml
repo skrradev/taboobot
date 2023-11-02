@@ -2,3 +2,7 @@ telegram:
   bot:
     token: ${BOT_KEY:botkey}
     username: ${BOT_NAME:botname}
+
+mongodb:
+  uri: "mongodb://taboo:123@localhost:27017"
+  database: "taboodb"
