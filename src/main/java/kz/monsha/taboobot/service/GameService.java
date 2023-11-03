@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -34,6 +36,7 @@ public class GameService {
     private final GameRoomRepository gameRoomRepository;
     private final TelegramApiService telegramApiService;
     private final ExecutorService threadPool;
+    private final ScheduledExecutorService scheduler;
     private final GamerAccountRepository gamerAccountRepository;
     private final GamerCardRepository gamerCardRepository;
 
@@ -212,24 +215,41 @@ public class GameService {
                 }
                 GamerAccount memberFromTwo = teamTwoIter.next();
 
-                // For this example, assume sendMessageToRoom is synchronous
                 String message = prepareMessageAboutRun(round, memberFromOne, memberFromTwo);
                 sendMessageToRoom(session.getRoomId(), message);
-                // Assume checkReadiness and sendCards are adapted to work synchronously
                 checkReadiness(memberFromOne);
                 sendCards(session, memberFromOne, memberFromTwo);
+                validatePoints(session, memberFromOne, memberFromTwo);
 
                 message = prepareMessageAboutRun(round, memberFromTwo, memberFromOne);
                 sendMessageToRoom(session.getRoomId(), message);
                 checkReadiness(memberFromTwo);
                 sendCards(session, memberFromTwo, memberFromOne);
+                validatePoints(session, memberFromTwo, memberFromOne);
             }
         }
     }
 
+    private void validatePoints(GameSession session, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
+
+    }
+
     private void sendCards(GameSession session, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
+        Future<?> oneRunTask = threadPool.submit(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+
+            }
 
 
+        });
+
+
+        scheduler.schedule(() -> {
+            if (!oneRunTask.isDone()) {
+                oneRunTask.cancel(true);
+                System.out.println("Task was cancelled after a timeout.");
+            }
+        }, 1, TimeUnit.MINUTES);
     }
 
     private void checkReadiness(GamerAccount memberFromOne) {

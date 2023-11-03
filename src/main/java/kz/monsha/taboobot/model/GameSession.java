@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -17,4 +18,5 @@ public class GameSession {
     private List<GamerAccount> secondTeam;
     private GamerAccount creator;
     private Integer registrationMessageId;
+    private Set<Long> playedCards;
 }
