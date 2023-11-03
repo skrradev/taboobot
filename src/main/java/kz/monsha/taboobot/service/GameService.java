@@ -197,7 +197,7 @@ public class GameService {
         int rounds = 0;
 
         List<GamerAccount> teamOne = session.getFirstTeam();
-        List<GamerAccount> teamTwo = session.getFirstTeam();
+        List<GamerAccount> teamTwo = session.getSecondTeam();
 
         int runs = Math.max(teamOne.size(), teamTwo.size());
 
