@@ -23,7 +23,8 @@ public class BotOutputService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-
+        System.out.println("This method must not be called");
+        throw new RuntimeException("This method must not be called");
     }
 
 }

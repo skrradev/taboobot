@@ -39,7 +39,6 @@ public class Main {
 
         GameSessionRepository gameSessionRepository = new GameSessionRepository() {
             Map<Long, GameSession> map = new HashMap<>();
-            long id = 0;
 
             @Override
             public GameSession getByRoomId(Long roomChatId) {
@@ -48,13 +47,11 @@ public class Main {
 
             @Override
             public void save(GameSession gameSession) {
-                map.put(id, gameSession);
-                id++;
+                map.put(gameSession.getRoomId(), gameSession);
             }
         };
         GameRoomRepository gameRoomRepository = new GameRoomRepository() {
             Map<Long, GameRoom> map = new HashMap<>();
-            long id = 0;
 
             @Override
             public GameRoom getByChatId(Long chatId) {
@@ -63,8 +60,7 @@ public class Main {
 
             @Override
             public void save(GameRoom room) {
-                map.put(id, room);
-                id++;
+                map.put(room.getRoomChatId(), room);
             }
         };
 
@@ -72,7 +68,6 @@ public class Main {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         GamerAccountRepository gamerAccountRepository = new GamerAccountRepository() {
             Map<Long, GamerAccount> map = new HashMap<>();
-            long id = 0;
 
             @Override
             public GamerAccount getByUserId(long userId) {
@@ -81,8 +76,7 @@ public class Main {
 
             @Override
             public void save(GamerAccount gamerAccount) {
-                map.put(id, gamerAccount);
-                id++;
+                map.put(gamerAccount.getUserId(), gamerAccount);
             }
         };
 
@@ -90,9 +84,9 @@ public class Main {
         };
 
 
-        BotOutputService producerService = new BotOutputService(botUsername, botToken);
+        BotOutputService outputService = new BotOutputService(botUsername, botToken);
 
-        TelegramApiService telegramApiService = new TelegramApiService(producerService);
+        TelegramApiService telegramApiService = new TelegramApiService(outputService);
         GameService gameService = new GameService(gameSessionRepository,
                 gameRoomRepository,
                 telegramApiService,
@@ -101,11 +95,10 @@ public class Main {
                 gamerAccountRepository,
                 gamerCardRepository
         );
-        BotInputService consumerService = new BotInputService(gameService, botUsername, botToken);
+        BotInputService inputService = new BotInputService(gameService, botUsername, botToken);
 
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-        telegramBotsApi.registerBot(consumerService);
-        telegramBotsApi.registerBot(producerService);
+        telegramBotsApi.registerBot(inputService);
 
 
     }
