@@ -1,16 +1,20 @@
 package kz.monsha.taboobot.model;
 
+import kz.monsha.taboobot.model.enums.GameSessionState;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Getter
+@Setter
 public class GameSession {
-    private Long id;
     private Long roomId;
     private LocalDateTime startedOn;
-    private LocalDateTime finishedOn;
-    //private GameSessionStates state;
-    private List<GameSessionMember> gameMembers;
-    private GamerAccount createdByGamerAccount;
-    private int rounds;
-
+    private GameSessionState state;
+    private List<GamerAccount> firstTeam;
+    private List<GamerAccount> secondTeam;
+    private GamerAccount creator;
+    private Integer registrationMessageId;
 }
