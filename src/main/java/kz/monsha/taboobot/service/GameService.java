@@ -8,6 +8,7 @@ import kz.monsha.taboobot.model.enums.GameSessionState;
 import kz.monsha.taboobot.repository.GameRoomRepository;
 import kz.monsha.taboobot.repository.GameSessionRepository;
 import kz.monsha.taboobot.repository.GamerAccountRepository;
+import kz.monsha.taboobot.repository.GamerCardRepository;
 import kz.monsha.taboobot.utilites.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class GameService {
     private final TelegramApiService telegramApiService;
     private final ExecutorService threadPool;
     private final GamerAccountRepository gamerAccountRepository;
+    private final GamerCardRepository gamerCardRepository;
 
     public void processNewGameCommand(Message message) {
         Utils.ensurePublicChat(message);
