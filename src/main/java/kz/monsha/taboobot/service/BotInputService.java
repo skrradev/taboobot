@@ -2,15 +2,13 @@ package kz.monsha.taboobot.service;
 
 import lombok.RequiredArgsConstructor;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.groupadministration.SetChatPhoto;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
 @RequiredArgsConstructor
-public class BotService extends TelegramLongPollingBot {
+public class BotInputService extends TelegramLongPollingBot {
 
     private final GameService gameService;
     private final String botUsername;

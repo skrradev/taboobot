@@ -11,7 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 @RequiredArgsConstructor
 public class TelegramApiService {
 
-    private final BotService botService;
+    private final BotOutputService botService;
 
     @SneakyThrows
     public Message sendMessage(SendMessage sendMessage) {
