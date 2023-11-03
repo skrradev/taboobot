@@ -8,8 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 @Setter
 public class RegistrationMessageData {
 
-    private final InlineKeyboardMarkup markupInline
-            ;
+    private final InlineKeyboardMarkup markupInline;
     private final String text;
 
     public RegistrationMessageData(String text, InlineKeyboardMarkup markupInline) {

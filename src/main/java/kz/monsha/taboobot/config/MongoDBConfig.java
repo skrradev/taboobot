@@ -9,16 +9,16 @@ public class MongoDBConfig {
 
     public MongoDBConfig(YamlConfigReader config) {
 
-        String uri = config.getValue("mongodb.uri");
-        String database = config.getValue("mongodb.database");
+//        String uri = config.getValue("mongodb.uri");
+//        String database = config.getValue("mongodb.database");
+//
+//        Datastore datastore = Morphia.createDatastore(MongoClients.create(uri), database);
 
-        Datastore datastore = Morphia.createDatastore(MongoClients.create(uri), database);
 
-
-        Book book = new Book();
-        book.setAuthor("author");
-        book.setTitle("title");
-        Book save = datastore.save(book);
+//        Book book = new Book();
+//        book.setAuthor("author");
+//        book.setTitle("title");
+//        Book save = datastore.save(book);
 
 
     }

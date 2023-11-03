@@ -3,17 +3,16 @@ package kz.monsha.taboobot.service;
 import kz.monsha.taboobot.dto.RegistrationMessageData;
 import kz.monsha.taboobot.model.GameRoom;
 import kz.monsha.taboobot.model.GameSession;
-import kz.monsha.taboobot.model.GameSessionMember;
 import kz.monsha.taboobot.model.GamerAccount;
 import kz.monsha.taboobot.model.enums.GameSessionState;
 import kz.monsha.taboobot.repository.GameRoomRepository;
 import kz.monsha.taboobot.repository.GameSessionRepository;
 import kz.monsha.taboobot.repository.GamerAccountRepository;
+import kz.monsha.taboobot.utilites.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -22,7 +21,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 
@@ -37,7 +35,7 @@ public class GameService {
     private final GamerAccountRepository gamerAccountRepository;
 
     public void processNewGameCommand(Message message) {
-        ensurePublicChat(message);
+        Utils.ensurePublicChat(message);
 
         User user = message.getFrom();
         GameRoom gameRoom = getOrCreateGameRoom(message);
@@ -173,7 +171,7 @@ public class GameService {
     }
 
 
-    private String resolveNickname(User user) {
+    private String resolveNickname(User user) {//TODO Simblify
         String nickName;
         if (user.getFirstName() != null && user.getLastName() != null) {
             nickName = user.getFirstName() + " " + user.getLastName();
@@ -185,14 +183,6 @@ public class GameService {
             nickName = user.getUserName();
         }
         return nickName;
-    }
-
-
-    private void ensurePublicChat(Message message) {
-        if (!message.getChat().getType().equals("private")
-                && !message.getChat().getType().equals("channel")) return;
-
-        throw new IllegalStateException("Это действие разрешено вызывать только из публичных чатов");
     }
 
 
@@ -216,7 +206,7 @@ public class GameService {
     }
 
     public void processRegistrationCommand(Message message) {
-        if (!message.getChat().getType().equals("private"))
+        if (!message.getChat().getType().equals("private"))//TODO Make util to check if it is private
             return;
 
         User user = message.getFrom();
