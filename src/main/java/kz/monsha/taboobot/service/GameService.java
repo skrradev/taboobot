@@ -19,6 +19,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -183,6 +184,64 @@ public class GameService {
             nickName = user.getUserName();
         }
         return nickName;
+    }
+
+
+    private void runGame(GameSession session) {
+        int rounds = 0;
+
+        List<GamerAccount> teamOne = session.getFirstTeam();
+        List<GamerAccount> teamTwo = session.getFirstTeam();
+
+        int runs = Math.max(teamOne.size(), teamTwo.size());
+
+        for (int round = 1; round <= rounds; round++) {
+            Iterator<GamerAccount> teamOneIter = teamOne.iterator();
+            Iterator<GamerAccount> teamTwoIter = teamTwo.iterator();
+
+            for (int j = 0; j < runs; j++) {
+                if (!teamOneIter.hasNext()) {
+                    teamOneIter = teamOne.iterator();
+                }
+                GamerAccount memberFromOne = teamOneIter.next();
+
+                if (!teamTwoIter.hasNext()) {
+                    teamTwoIter = teamTwo.iterator();
+                }
+                GamerAccount memberFromTwo = teamTwoIter.next();
+
+                // For this example, assume sendMessageToRoom is synchronous
+                String message = prepareMessageAboutRun(round, memberFromOne, memberFromTwo);
+                sendMessageToRoom(session.getRoomId(), message);
+                // Assume checkReadiness and sendCards are adapted to work synchronously
+                checkReadiness(memberFromOne);
+                sendCards(session, memberFromOne, memberFromTwo);
+
+                message = prepareMessageAboutRun(round, memberFromTwo, memberFromOne);
+                sendMessageToRoom(session.getRoomId(), message);
+                checkReadiness(memberFromTwo);
+                sendCards(session, memberFromTwo, memberFromOne);
+            }
+        }
+    }
+
+    private void sendCards(GameSession session, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
+
+
+    }
+
+    private void checkReadiness(GamerAccount memberFromOne) {
+
+
+    }
+
+    private void sendMessageToRoom(Long roomId, String message) {
+
+    }
+
+    private String prepareMessageAboutRun(int round, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
+
+        return null;
     }
 
 
