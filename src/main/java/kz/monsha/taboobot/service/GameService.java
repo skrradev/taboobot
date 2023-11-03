@@ -11,6 +11,7 @@ import kz.monsha.taboobot.repository.GamerAccountRepository;
 import kz.monsha.taboobot.repository.GamerCardRepository;
 import kz.monsha.taboobot.utilites.Utils;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -234,9 +235,26 @@ public class GameService {
 
     }
 
+
+    Object someLock = new Object(); // TODO
+
+    @SneakyThrows
     private void sendCards(GameSession session, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
         Future<?> oneRunTask = threadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
+                // send card to watcher and giver with corresponding buttons
+               synchronized (someLock) {
+                   try {
+                       wait(); // will be notified by buzzer, next or skip buttons
+
+                       //if buzzer pressed then count it as buzzer, and go to the next card
+                       //if skip pressed then count it as skiped, and go to the next card
+                       //if next pressed then count it as guessed, and go to the next card
+
+                   } catch (InterruptedException e) {
+                       throw new RuntimeException(e);
+                   }
+               }
 
             }
 
