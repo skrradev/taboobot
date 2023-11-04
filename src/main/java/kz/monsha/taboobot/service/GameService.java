@@ -1,9 +1,11 @@
 package kz.monsha.taboobot.service;
 
 import kz.monsha.taboobot.dto.RegistrationMessageData;
+import kz.monsha.taboobot.model.GameCard;
 import kz.monsha.taboobot.model.GameRoom;
 import kz.monsha.taboobot.model.GameSession;
 import kz.monsha.taboobot.model.GamerAccount;
+import kz.monsha.taboobot.model.enums.GameCardEvent;
 import kz.monsha.taboobot.model.enums.GameSessionState;
 import kz.monsha.taboobot.repository.GameRoomRepository;
 import kz.monsha.taboobot.repository.GameSessionRepository;
@@ -27,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -40,6 +43,7 @@ public class GameService {
     private final ScheduledExecutorService scheduler;
     private final GamerAccountRepository gamerAccountRepository;
     private final GamerCardRepository gamerCardRepository;
+    private final GameLifecycleManagerService gameLifecycleManagerService;
 
     public void processNewGameCommand(Message message) {
         Utils.ensurePublicChat(message);
@@ -194,18 +198,18 @@ public class GameService {
 
 
     private void runGame(GameSession session) {
-        int rounds = 0;
+        int turns = 0;
 
         List<GamerAccount> teamOne = session.getFirstTeam();
         List<GamerAccount> teamTwo = session.getSecondTeam();
 
-        int runs = Math.max(teamOne.size(), teamTwo.size());
+        int round = Math.max(teamOne.size(), teamTwo.size());
 
-        for (int round = 1; round <= rounds; round++) {
+        for (int turn = 1; turn <= turns; turn++) {
             Iterator<GamerAccount> teamOneIter = teamOne.iterator();
             Iterator<GamerAccount> teamTwoIter = teamTwo.iterator();
 
-            for (int j = 0; j < runs; j++) {
+            for (int j = 0; j < round; j++) {
                 if (!teamOneIter.hasNext()) {
                     teamOneIter = teamOne.iterator();
                 }
@@ -216,13 +220,13 @@ public class GameService {
                 }
                 GamerAccount memberFromTwo = teamTwoIter.next();
 
-                String message = prepareMessageAboutRun(round, memberFromOne, memberFromTwo);
+                String message = prepareMessageAboutRun(turn, memberFromOne, memberFromTwo);
                 sendMessageToRoom(session.getRoomId(), message);
                 checkReadiness(memberFromOne);
                 sendCards(session, memberFromOne, memberFromTwo);
                 validatePoints(session, memberFromOne, memberFromTwo);
 
-                message = prepareMessageAboutRun(round, memberFromTwo, memberFromOne);
+                message = prepareMessageAboutRun(turn, memberFromTwo, memberFromOne);
                 sendMessageToRoom(session.getRoomId(), message);
                 checkReadiness(memberFromTwo);
                 sendCards(session, memberFromTwo, memberFromOne);
@@ -239,22 +243,28 @@ public class GameService {
     Object someLock = new Object(); // TODO
 
     @SneakyThrows
-    private void sendCards(GameSession session, GamerAccount memberFromOne, GamerAccount memberFromTwo) {
+    private void sendCards(GameSession session, GamerAccount giver, GamerAccount watcher) {
         Future<?> oneRunTask = threadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
-                // send card to watcher and giver with corresponding buttons
-               synchronized (someLock) {
-                   try {
-                       wait(); // will be notified by buzzer, next or skip buttons
+                GameCard gameCard = gameLifecycleManagerService.getNextCard();
+                sendCardToGiver(gameCard, session, giver);
+                sendCardToWatcher(gameCard, session, watcher);
 
-                       //if buzzer pressed then count it as buzzer, and go to the next card
-                       //if skip pressed then count it as skiped, and go to the next card
-                       //if next pressed then count it as guessed, and go to the next card
+                synchronized (someLock) {
+                    try {
+                        wait();
+                        GameCardEvent gameCardEvent = session.getGameCardEvent();
+                        switch (gameCardEvent) {
+                            case NEXT -> session.getGuessedWords().add(gameCard.getWord());
+                            case SKIP -> session.getSkippedWords().add(gameCard.getWord());
+                            case BUZZER -> session.getBuzzerWords().add(gameCard.getWord());
+                        }
 
-                   } catch (InterruptedException e) {
-                       throw new RuntimeException(e);
-                   }
-               }
+
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
 
             }
 
@@ -268,6 +278,94 @@ public class GameService {
                 System.out.println("Task was cancelled after a timeout.");
             }
         }, 1, TimeUnit.MINUTES);
+    }
+
+    private void sendCardToWatcher(GameCard gameCard, GameSession session, GamerAccount watcher) {
+        String tabooWords = String.join("\n", gameCard.getTabooWords());
+
+        String text = String.format(
+                """
+                        <b> %s </b>
+                                           
+                        %s   \s
+                        """,
+                gameCard.getWord(),
+                tabooWords
+        ).trim();
+
+        if (session.getWatcherCardMessageId() != null) {
+            telegramApiService.deleteMessage(watcher.getPersonalChatId(), session.getWatcherCardMessageId());
+        }
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        InlineKeyboardButton buzzerButton = new InlineKeyboardButton();
+        buzzerButton.setText("Skip");
+        buzzerButton.setCallbackData("buzzer?roomId=" + session.getRoomId());
+        rowInline.add(buzzerButton);
+        rowsInline.add(rowInline);
+
+        markupInline.setKeyboard(rowsInline);
+
+        SendMessage sendMessageAction = new SendMessage(); // Create a message object
+        sendMessageAction.setChatId(watcher.getPersonalChatId());
+        sendMessageAction.setReplyMarkup(markupInline);
+        sendMessageAction.setText(text);
+        sendMessageAction.setParseMode(ParseMode.HTML);
+
+        Message message = telegramApiService.sendMessage(sendMessageAction);
+
+        session.setWatcherCardMessageId(message.getMessageId());
+    }
+
+    private void sendCardToGiver(GameCard gameCard, GameSession session, GamerAccount giver) {
+        String tabooWords = String.join("\n", gameCard.getTabooWords());
+
+        String text = String.format(
+                """
+                        <b> %s </b>
+                                           
+                        %s   \s
+                        """,
+                gameCard.getWord(),
+                tabooWords
+        ).trim();
+
+        if (session.getGiverCardMessageId() != null) {
+            telegramApiService.deleteMessage(giver.getPersonalChatId(), session.getGiverCardMessageId());
+        }
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        InlineKeyboardButton skipButton = new InlineKeyboardButton();
+        skipButton.setText("Skip");
+        skipButton.setCallbackData("skipCard?roomId=" + session.getRoomId());
+
+        InlineKeyboardButton nextButton = new InlineKeyboardButton();
+        nextButton.setText("Next");
+        nextButton.setCallbackData("skipCard?roomId=" + session.getRoomId());
+
+        rowInline.add(skipButton);
+        rowInline.add(nextButton);
+
+        rowsInline.add(rowInline);
+
+        markupInline.setKeyboard(rowsInline);
+
+
+        SendMessage sendMessageAction = new SendMessage(); // Create a message object
+        sendMessageAction.setChatId(giver.getPersonalChatId());
+        sendMessageAction.setReplyMarkup(markupInline);
+        sendMessageAction.setText(text);
+        sendMessageAction.setParseMode(ParseMode.HTML);
+
+        Message message = telegramApiService.sendMessage(sendMessageAction);
+
+        session.setGiverCardMessageId(message.getMessageId());
     }
 
     private void checkReadiness(GamerAccount memberFromOne) {

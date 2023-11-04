@@ -1,5 +1,6 @@
 package kz.monsha.taboobot.model;
 
+import kz.monsha.taboobot.model.enums.GameCardEvent;
 import kz.monsha.taboobot.model.enums.GameSessionState;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,4 +20,15 @@ public class GameSession {
     private GamerAccount creator;
     private Integer registrationMessageId;
     private Set<Long> playedCards;
+
+    private volatile GameCardEvent gameCardEvent;
+
+
+    private List<String> guessedWords;
+    private List<String> skippedWords;
+    private List<String> buzzerWords;
+
+
+    private Integer giverCardMessageId; // TODO
+    private Integer watcherCardMessageId; // TODO
 }
