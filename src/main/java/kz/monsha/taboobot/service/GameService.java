@@ -1,6 +1,7 @@
 package kz.monsha.taboobot.service;
 
 import kz.monsha.taboobot.dto.RegistrationMessageData;
+import kz.monsha.taboobot.exeptions.SimpleException;
 import kz.monsha.taboobot.model.GameCard;
 import kz.monsha.taboobot.model.GameRoom;
 import kz.monsha.taboobot.model.GameSession;
@@ -12,6 +13,8 @@ import kz.monsha.taboobot.repository.GameSessionRepository;
 import kz.monsha.taboobot.repository.GamerAccountRepository;
 import kz.monsha.taboobot.repository.GamerCardRepository;
 import kz.monsha.taboobot.utilites.Utils;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -25,14 +28,15 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 
 @Slf4j
+@Builder
+@AllArgsConstructor
 @RequiredArgsConstructor
 public class GameService {
 
@@ -46,14 +50,14 @@ public class GameService {
     private final GameLifecycleManagerService gameLifecycleManagerService;
 
     public void processNewGameCommand(Message message) {
-        Utils.ensurePublicChat(message);
+        Utils.ensurePublicChat(message, new SimpleException("This action can only be called from public chats."));
 
         User user = message.getFrom();
         GameRoom gameRoom = getOrCreateGameRoom(message);
         GamerAccount gamerAccount = gamerAccountRepository.getByUserId(user.getId());
 
         if (gamerAccount == null) {
-            throw new IllegalStateException("You can't create a game! You should register at first! Register by /start command in DM with bot");
+            throw new SimpleException("You can't create a game! You should register at first! Register by /start command in DM with bot");
         }
 
         // trying to find existing session from cache
@@ -76,14 +80,16 @@ public class GameService {
 
     private void createRegistrationMessage(GameSession gameSession) {
 
-        Future<?> registrationMessageTask = threadPool.submit(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
+        Runnable runnable = () -> {
+            try {
+
+                int i = 0;
+                while (true) {
+
                     log.info("Creating registration message");
                     Integer registrationMessageId = gameSession.getRegistrationMessageId();
                     if (registrationMessageId != null) {
                         telegramApiService.deleteMessage(gameSession.getRoomId(), registrationMessageId);
-                        Thread.sleep(1000);
                     }
 
                     SendMessage sendMessageAction = new SendMessage(); // Create a message object
@@ -92,7 +98,7 @@ public class GameService {
                     RegistrationMessageData messageData = generateRegistrationMessage(gameSession);
 
                     sendMessageAction.setReplyMarkup(messageData.getMarkupInline());
-                    sendMessageAction.setText(messageData.getText());
+                    sendMessageAction.setText(++i + messageData.getText());
                     sendMessageAction.setParseMode(ParseMode.HTML);
 
                     Message message = telegramApiService.sendMessage(sendMessageAction);
@@ -100,16 +106,22 @@ public class GameService {
 
                     gameSessionRepository.save(gameSession);
 
-                    Thread.sleep(90_000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("Thread interrupted", e);
-                    break;
-                } catch (Exception e) {
-                    log.error("Error occurred in registration message creation", e);
+                    Thread.sleep(5000L);
+//                    Thread.sleep(90_000L);
+
+                    GameSession actualState = gameSessionRepository.getByRoomId(gameSession.getRoomId());
+
+                    if (GameSessionState.REGISTRATION != actualState.getState()) {
+                        break;
+                    }
                 }
+
+            } catch (Throwable throwable) {
+                log.error(throwable.getMessage(), throwable);
             }
-        });
+        };
+
+        threadPool.submit(runnable);
 
     }
 
@@ -134,10 +146,10 @@ public class GameService {
                 """
                         <b>Welcome to Taboo game!!! </b>
                         Registration to a new game. Host is %s.
-                        <br>
+                                                
                         Team 1 players:
                         %s
-                        <br>
+                                                
                         Team 2 players:
                         %s""",
                 gameSession.getCreator().getNickName(),
@@ -151,7 +163,7 @@ public class GameService {
 
         InlineKeyboardButton team1Button = new InlineKeyboardButton();
         team1Button.setText("Join team 1 🎮");
-        team1Button.setCallbackData("join_game?roomId=" + gameSession.getRoomId() + "&team=1");
+        team1Button.setCallbackData("join_game?roomId=" + gameSession.getRoomId() + "&team=1");//TODO let's use json
 
         InlineKeyboardButton team2Button = new InlineKeyboardButton();
         team2Button.setText("Join team 2 🎮");
@@ -169,12 +181,14 @@ public class GameService {
 
 
     public GameRoom getOrCreateGameRoom(Message message) {
-        GameRoom room = gameRoomRepository.getByChatId(message.getChatId());
-        if (room != null) {
-            return room;
+        Optional<GameRoom> gameRoomOpt = gameRoomRepository.getByChatId(message.getChatId());
+        if (gameRoomOpt.isPresent()) {
+            return gameRoomOpt.get();
         }
-        room = new GameRoom();
+
+        GameRoom room = new GameRoom();
         room.setRoomChatId(message.getChatId());
+        room.setId(message.getChatId());
         room.setRoomName(message.getChat().getTitle());
 
         gameRoomRepository.save(room);
@@ -389,7 +403,7 @@ public class GameService {
     }
 
     public void processStopGameCommand(Message message) {
-
+        //gameSessionRepository.getByRoomId(message.get)
     }
 
     public void processLeaveGameCommand(Message message) {
@@ -438,4 +452,9 @@ public class GameService {
         gamerAccountRepository.save(gamerAccount);
 
     }
+
+    public void senMessage(Long id, String message) {
+        telegramApiService.sendSimpleMessage(id, message);
+    }
 }
+

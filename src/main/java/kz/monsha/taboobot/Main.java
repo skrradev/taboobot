@@ -20,6 +20,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -54,8 +55,8 @@ public class Main {
             Map<Long, GameRoom> map = new HashMap<>();
 
             @Override
-            public GameRoom getByChatId(Long chatId) {
-                return map.get(chatId);
+            public Optional<GameRoom> getByChatId(Long chatId) {
+                return Optional.ofNullable(map.get(chatId));
             }
 
             @Override
@@ -87,14 +88,16 @@ public class Main {
         BotOutputService outputService = new BotOutputService(botUsername, botToken);
 
         TelegramApiService telegramApiService = new TelegramApiService(outputService);
-        GameService gameService = new GameService(gameSessionRepository,
-                gameRoomRepository,
-                telegramApiService,
-                threadPool,
-                scheduler,
-                gamerAccountRepository,
-                gamerCardRepository
-        );
+        GameService gameService = GameService.builder()
+                .gameSessionRepository(gameSessionRepository)
+                .gameRoomRepository(gameRoomRepository)
+                .telegramApiService(telegramApiService)
+                .threadPool(threadPool)
+                .scheduler(scheduler)
+                .gamerAccountRepository(gamerAccountRepository)
+                .gamerCardRepository(gamerCardRepository)
+                .build();
+
         BotInputService inputService = new BotInputService(gameService, botUsername, botToken);
 
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);

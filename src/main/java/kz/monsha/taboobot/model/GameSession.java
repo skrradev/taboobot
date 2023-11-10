@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -15,8 +16,8 @@ public class GameSession {
     private Long roomId;
     private LocalDateTime startedOn;
     private GameSessionState state;
-    private List<GamerAccount> firstTeam;
-    private List<GamerAccount> secondTeam;
+    private List<GamerAccount> firstTeam = new ArrayList<>();
+    private List<GamerAccount> secondTeam = new ArrayList<>();
     private GamerAccount creator;
     private Integer registrationMessageId;
     private Set<Long> playedCards;
@@ -24,9 +25,9 @@ public class GameSession {
     private volatile GameCardEvent gameCardEvent;
 
 
-    private List<String> guessedWords;
-    private List<String> skippedWords;
-    private List<String> buzzerWords;
+    private List<String> guessedWords = new ArrayList<>();
+    private List<String> skippedWords = new ArrayList<>();
+    private List<String> buzzerWords = new ArrayList<>();
 
 
     private Integer giverCardMessageId; // TODO
