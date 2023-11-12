@@ -2,10 +2,7 @@ package kz.monsha.taboobot.service;
 
 import kz.monsha.taboobot.dto.RegistrationMessageData;
 import kz.monsha.taboobot.exeptions.SimpleException;
-import kz.monsha.taboobot.model.GameCard;
-import kz.monsha.taboobot.model.GameRoom;
-import kz.monsha.taboobot.model.GameSession;
-import kz.monsha.taboobot.model.GamerAccount;
+import kz.monsha.taboobot.model.*;
 import kz.monsha.taboobot.model.enums.GameCardEvent;
 import kz.monsha.taboobot.model.enums.GameSessionState;
 import kz.monsha.taboobot.repository.GameRoomRepository;
@@ -61,14 +58,14 @@ public class GameService {
         }
 
         // trying to find existing session from cache
-        GameSession gameSession = gameSessionRepository.getByRoomId(gameRoom.getRoomChatId());
+        var gameSessionOpt = gameSessionRepository.getByRoomId(gameRoom.getRoomChatId());
 
-        if (gameSession != null) {
+        if (gameSessionOpt.isPresent()) {
             telegramApiService.sendSimpleMessage(gameRoom.getRoomChatId(), "You can't create a game where it already exists :)");
             return;
         }
 
-        gameSession = new GameSession();
+        GameSession gameSession = new GameSession();
         gameSession.setRoomId(gameRoom.getRoomChatId());
         gameSession.setState(GameSessionState.REGISTRATION);
         gameSession.setCreator(gamerAccount);
@@ -109,9 +106,9 @@ public class GameService {
                     Thread.sleep(5000L);
 //                    Thread.sleep(90_000L);
 
-                    GameSession actualState = gameSessionRepository.getByRoomId(gameSession.getRoomId());
+                    var optState = gameSessionRepository.getByRoomId(gameSession.getRoomId());
 
-                    if (GameSessionState.REGISTRATION != actualState.getState()) {
+                    if (optState.isEmpty() || GameSessionState.REGISTRATION != optState.get().getState()) {
                         break;
                     }
                 }
@@ -398,8 +395,15 @@ public class GameService {
 
 
     public void processStartGameCommand(Message message) {
+        Utils.validateIsPrivateChat(message, new SimpleException("this action can be made only in private message"));
 
+        GameSession gameSession = gameSessionRepository.getByCreator(Utils.getUserId(message))
+                .orElseThrow(() -> new SimpleException("You haven't created a game."));
 
+        if(GameSessionState.REGISTRATION != gameSession.getState()){
+            throw new SimpleException("game not created yet or already started");
+        }
+        gameSession.setState(GameSessionState.PLAYING);//TODO or on preparing state
     }
 
     public void processStopGameCommand(Message message) {
@@ -441,20 +445,36 @@ public class GameService {
 
     private void updateGamerAccountIfNeeded(Message message, GamerAccount gamerAccount) {
         String nickname = resolveNickname(message.getFrom());
-        if (!gamerAccount.getNickName().equals(nickname)) {
-            gamerAccount.setNickName(nickname);
-        }
-
-        if (!gamerAccount.getPersonalChatId().equals(message.getChatId())) {
-            gamerAccount.setPersonalChatId(message.getChatId());
-        }
-
+        gamerAccount.setNickName(nickname);
+        gamerAccount.setPersonalChatId(message.getChatId());
         gamerAccountRepository.save(gamerAccount);
 
     }
 
     public void senMessage(Long id, String message) {
         telegramApiService.sendSimpleMessage(id, message);
+    }
+
+    //we can move this logic to separate service
+    public void processJoinGame(Long userId, CallBackParams callBackData) {
+
+        Long roomId = callBackData.getLong("roomId");
+        GameSession gameSession = gameSessionRepository.getByRoomId(roomId).orElseThrow(() -> new SimpleException("room not found!"));
+        if (GameSessionState.REGISTRATION != gameSession.getState()) {
+            return;
+        }
+        Long team = callBackData.getLong("team");
+
+        gameSession.getFirstTeam().removeIf((itm) -> itm.getUserId().equals(userId));
+        gameSession.getSecondTeam().removeIf((itm) -> itm.getUserId().equals(userId));
+
+        GamerAccount gamerAccount = gamerAccountRepository.getByUserId(userId);
+        if (team == 1) {
+            gameSession.addToFirstTeam(gamerAccount);
+        } else {
+            gameSession.addToSecondTeam(gamerAccount);
+        }
+
     }
 }
 

@@ -42,13 +42,18 @@ public class Main {
             Map<Long, GameSession> map = new HashMap<>();
 
             @Override
-            public GameSession getByRoomId(Long roomChatId) {
-                return map.get(roomChatId);
+            public Optional<GameSession> getByRoomId(Long roomChatId) {
+                return Optional.ofNullable(map.get(roomChatId));
             }
 
             @Override
             public void save(GameSession gameSession) {
                 map.put(gameSession.getRoomId(), gameSession);
+            }
+
+            @Override
+            public Optional<GameSession> getByCreator(Long userId) {
+                return map.values().stream().filter((value) -> value.getCreator().getUserId().equals(userId)).findAny();
             }
         };
         GameRoomRepository gameRoomRepository = new GameRoomRepository() {
@@ -69,6 +74,15 @@ public class Main {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         GamerAccountRepository gamerAccountRepository = new GamerAccountRepository() {
             Map<Long, GamerAccount> map = new HashMap<>();
+
+            {
+                GamerAccount gamerAccount = new GamerAccount();
+                gamerAccount.setUserId(445469800L);
+                gamerAccount.setPersonalChatId(445469800L);
+                gamerAccount.setNickName("Daulet Seitov");
+
+                map.put(445469800L, gamerAccount);
+            }
 
             @Override
             public GamerAccount getByUserId(long userId) {

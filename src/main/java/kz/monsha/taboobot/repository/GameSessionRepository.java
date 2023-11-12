@@ -2,8 +2,12 @@ package kz.monsha.taboobot.repository;
 
 import kz.monsha.taboobot.model.GameSession;
 
+import java.util.Optional;
+
 public interface GameSessionRepository {
-    GameSession getByRoomId(Long roomChatId);//TODO make  it return optional
+    Optional<GameSession> getByRoomId(Long roomChatId);
 
     void save(GameSession gameSession);
+
+    Optional<GameSession> getByCreator(Long userId);
 }
