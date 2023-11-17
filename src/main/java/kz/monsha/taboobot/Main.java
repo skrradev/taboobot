@@ -55,6 +55,12 @@ public class Main {
             public Optional<GameSession> getByCreator(Long userId) {
                 return map.values().stream().filter((value) -> value.getCreator().getUserId().equals(userId)).findAny();
             }
+
+            @Override
+            public void deleteByUserId(Long userId) {
+                Optional<GameSession> byCreator = getByCreator(userId);
+                byCreator.ifPresent(session -> map.remove(session.getRoomId()));
+            }
         };
         GameRoomRepository gameRoomRepository = new GameRoomRepository() {
             Map<Long, GameRoom> map = new HashMap<>();

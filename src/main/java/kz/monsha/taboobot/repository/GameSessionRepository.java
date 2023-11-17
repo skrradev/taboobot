@@ -10,4 +10,6 @@ public interface GameSessionRepository {
     void save(GameSession gameSession);
 
     Optional<GameSession> getByCreator(Long userId);
+
+    void deleteByUserId(Long userId);
 }

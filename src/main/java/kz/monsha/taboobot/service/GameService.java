@@ -400,7 +400,7 @@ public class GameService {
         GameSession gameSession = gameSessionRepository.getByCreator(Utils.getUserId(message))
                 .orElseThrow(() -> new SimpleException("You haven't created a game."));
 
-        if(GameSessionState.REGISTRATION != gameSession.getState()){
+        if (GameSessionState.REGISTRATION != gameSession.getState()) {
             throw new SimpleException("game not created yet or already started");
         }
         gameSession.setState(GameSessionState.PLAYING);//TODO or on preparing state
@@ -411,8 +411,8 @@ public class GameService {
     }
 
     public void processLeaveGameCommand(Message message) {
-
-
+        Utils.validateIsPrivateChat(message, new SimpleException("this action can be made only in private message"));
+        gameSessionRepository.deleteByUserId(message.getFrom().getId());
     }
 
     public void processLeaderboardCommand(Message message) {
